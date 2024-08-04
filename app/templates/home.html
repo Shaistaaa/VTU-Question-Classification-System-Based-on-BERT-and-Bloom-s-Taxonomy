@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Task Classifier</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 20px;
+  }
+  .container {
+    max-width: 600px;
+    margin: auto;
+    background: #fff;
+    padding: 20px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  h1 {
+    color: #333;
+  }
+  #question-form {
+    margin-bottom: 20px;
+  }
+  #question-input {
+    width: 70%;
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+  }
+  #submit-btn {
+    padding: 10px 20px;
+    background: #5cb85c;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  #submit-btn:hover {
+    background: #4cae4c;
+  }
+  .result {
+    background-color: #e2e2e2;
+    padding: 20px;
+    margin-top: 20px;
+    border-radius: 4px;
+    display: none; /* Hide until results are available */
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h1>VTU Question Classification System Based on BERT and Bloom’s Taxonomy</h1>
+  <form id="question-form">
+    <input type="text" id="question-input" placeholder="Enter your task here" required>
+    <button type="submit" id="submit-btn">Classify Task</button>
+  </form>
+  <div id="result" class="result"></div>
+  <button id="download-btn" style="display: none;">Download Results</button> <!-- Download button (hidden by default) -->
+  <button id="clear-btn" style="display: none;">Clear Results</button> <!-- Clear button (hidden by default) -->
+  <h2>History</h2>
+  <div id="history" class="history"></div> <!-- History container -->
+
+</div>
+
+<script>
+document.getElementById('question-form').addEventListener('submit', function(event){
+  event.preventDefault();
+  var question = document.getElementById('question-input').value;
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "http://127.0.0.1:7000/classify", true); // Updated endpoint
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+      var result = JSON.parse(xhr.responseText);
+      displayResult(result, question);
+    }
+  };
+  xhr.send(JSON.stringify({text: question}));
+});
+
+document.getElementById('question-form').addEventListener('submit', function(event){
+  event.preventDefault();
+  var question = document.getElementById('question-input').value;
+  var xhr = new XMLHttpRequest();
+  xhr.open("POST", "your_flask_endpoint_here", true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function () {
+    if (xhr.readyState == 4 && xhr.status == 200) {
+      var result = JSON.parse(xhr.responseText);
+      displayResult(result, question);
+    }
+  };
+  xhr.send(JSON.stringify({text: question}));
+});
+
+var historyData = [];
+
+function displayResult(data, question) {
+  var resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = "<h2>Classification: " + data.blooms_level + "</h2>";
+  for(var key in data.probabilities){
+    resultDiv.innerHTML += "<p>" + key + ": " + (data.probabilities[key] * 100).toFixed(2) + "%</p>";
+  }
+  resultDiv.style.display = 'block';
+  document.getElementById('download-btn').style.display = 'inline';
+  document.getElementById('clear-btn').style.display = 'inline';
+  
+  historyData.push({question: question, result: data});
+  updateHistory();
+}
+
+document.getElementById('download-btn').addEventListener('click', function() {
+  var text = historyData.map(item => item.question + ': ' + JSON.stringify(item.result)).join('\n');
+  var blob = new Blob([text], {type: 'text/plain'});
+  var url = window.URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'results.txt';
+  document.body.appendChild(a); // Append the anchor to body
+  a.click();
+  document.body.removeChild(a); // Remove the anchor from body
+  window.URL.revokeObjectURL(url);
+});
+
+document.getElementById('clear-btn').addEventListener('click', function() {
+  document.getElementById('result').style.display = 'none';
+  document.getElementById('download-btn').style.display = 'none';
+  this.style.display = 'none';
+});
+
+function updateHistory() {
+  var historyDiv = document.getElementById('history');
+  historyDiv.innerHTML = historyData.map(item => '<p>' + item.question + ': ' + item.result.blooms_level + '</p>').join('');
+}
+
+</script>
+</body>
+</html>
